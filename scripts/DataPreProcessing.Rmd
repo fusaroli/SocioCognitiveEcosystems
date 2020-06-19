@@ -1,0 +1,1291 @@
+---
+title: "SocialCognition_Preprocess"
+author: "RF"
+date: "9/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse,janitor)
+setwd("~/Dropbox (Personal)/SocialCognitionEcosystems")
+```
+
+## Data preprocessing steps
+
+## Clean up week 46 (follow comments below)
+## Add timing files
+## Clean up imi-inhibition (follow comments below)
+
+
+```{r}
+
+CogSci1_timing <- read_csv("data/CogSci1_times.csv")
+CogSci2_timing <- read_csv("data/CogSci2_times.csv")
+
+CogSci_timing <- merge(CogSci1_timing,CogSci2_timing,all=T)
+CogSci1_timing <- NULL
+CogSci2_timing <- NULL
+
+CogSci1_data <- read_csv("data/CogSci1_data.csv")
+CogSci2_data <- read_csv("data/CogSci2_data.csv")
+
+CogSci_data <- merge(CogSci1_data,CogSci2_data,all=T)
+CogSci1_data <- NULL
+CogSci2_data <- NULL
+
+CogSci_data <- CogSci_data %>% subset(!is.na(survey.1.player.pid)) %>% remove_empty("cols")
+
+English1_timing <- read_csv("data/English1_times.csv")
+English2_timing <- read_csv("data/English2_times.csv")
+
+English_timing <- merge(English1_timing,English2_timing,all=T)
+English1_timing <- NULL
+English2_timing <- NULL
+
+English1_data <- read_csv("data/English1_data.csv")
+English2_data <- read_csv("data/English2_data.csv")
+
+English_data <- merge(English1_data,English2_data,all=T)
+English1_data <- NULL
+English2_data <- NULL
+
+English_data <- English_data %>% subset(!is.na(survey.1.player.pid)) %>% remove_empty("cols")
+
+Linguistics_timing <- read_csv("data/Linguistic_times.csv")
+Linguistics_data <- read_csv("data/Linguistic_data.csv")
+
+Linguistics_data <- Linguistics_data %>% subset(!is.na(survey.1.player.pid)) %>% remove_empty("cols")
+
+Nordic1_timing <- read_csv("data/Nordic1_times.csv")
+Nordic2_timing <- read_csv("data/Nordic2_times.csv")
+
+Nordic_timing <- merge(Nordic1_timing,Nordic2_timing,all=T)
+Nordic1_timing <- NULL
+Nordic2_timing <- NULL
+
+Nordic1_data <- read_csv("data/Nordic1_data.csv")
+Nordic2_data <- read_csv("data/Nordic2_data.csv")
+
+Nordic_data <- merge(Nordic1_data,Nordic2_data,all=T)
+Nordic1_data <- NULL
+Nordic2_data <- NULL
+
+Nordic_data <- Nordic_data %>% subset(!is.na(survey.1.player.pid)) %>% remove_empty("cols")
+
+Religion_timing <- read_csv("data/Religion_times.csv")
+Religion_data <- read_csv("data/Religion_data.csv")
+Religion_data <- subset(Religion_data, !is.na(participant.label))
+
+W46 <- read_csv("data/W46_times.csv")
+W46_data <- read_csv("data/W46_data.csv")
+W46_data <- subset(W46_data, !is.na(participant.label))
+
+W47 <- read_csv("data/W47_times.csv")
+W47_data <- read_csv("data/W47_data.csv")
+W47_data <- subset(W47_data, !is.na(participant.label))
+
+W4647_timing <- merge(W46, W47, all=T) %>% distinct()
+W4647_data <- merge(W46_data, W47_data, all=T) %>% distinct()
+
+## Identify educations
+# Network sent by mail: 7xktg2dt
+# Digital Design: 9qw5a26v
+# Media Studies: 9orq5e85
+# Last call: 438cckzh AND obuqo83e (Each participant has an extra variable for their education)
+# Information Science:  5wlgptkr AND leg091bz (1 extra student without group)
+W4647_data$Class <- "Mixed"
+
+CogSci_data$Class <- "CogSci"
+English_data$Class <- "English"
+Linguistics_data$Class <- "Linguistics"
+Nordic_data$Class <- "Nordic"
+Religion_data$Class <- "Religion"
+
+CogSci_timing$Class <- "CogSci"
+English_timing$Class <- "English"
+Linguistics_timing$Class <- "Linguistics"
+Nordic_timing$Class <- "Nordic"
+Religion_timing$Class <- "Religion"
+
+
+CogSci_data$participant.label <- NA
+CogSci_data$break.1.player.id_in_group <- NA
+CogSci_data$break.1.player.payoff <- NA
+CogSci_data$break.1.group.id_in_subsession <- NA
+CogSci_data$break.1.subsession.round_number <- NA
+
+data <- rbind(
+  CogSci_data,
+  English_data,
+  Linguistics_data,
+  Nordic_data
+)
+
+## Now add the missing columns to merge with Religion
+MissingOnes <- colnames(Religion_data)[!(colnames(Religion_data) %in% colnames(data))]
+data[,MissingOnes] = NA
+
+data <- rbind(
+  data,
+  Religion_data
+)
+# Now add week 46-47 & LastCall
+MissingOnes <- colnames(W4647_data)[!(colnames(W4647_data) %in% colnames(data))]
+data[,MissingOnes] = NA
+MissingOnes <- colnames(data)[!(colnames(data) %in% colnames(W4647_data))]
+W4647_data[,MissingOnes] = NA
+
+x<- compare_df_cols(data,
+  W4647_data)
+x[x$data != x$W4647_data,]
+
+cols.char <- c("network_followup.1.player.friend1",
+         "network_followup.1.player.friend2",
+         "network_followup.1.player.friend3",
+         "network_followup.1.player.friend4",
+         "network_followup.1.player.friend5",
+         "network_followup.1.player.friend6",
+         "network_followup.1.player.friend7",
+         "network_followup.1.player.friend8",
+         "survey_network.1.player.computer",
+         "survey_network.1.player.gender",
+         "survey_network.1.player.introweek",
+         "survey_network.1.player.language",
+         "survey_network.1.player.pid")
+
+cols.num <- c("survey_network.1.player.age",
+         "network_followup.1.player.scale1",
+         "network_followup.1.player.scale2",
+         "network_followup.1.player.scale3",
+         "network_followup.1.player.scale4",
+         "network_followup.1.player.scale5",
+         "network_followup.1.player.scale6",
+         "network_followup.1.player.scale7",
+         "network_followup.1.player.scale8")
+         
+data[cols.char] <- sapply(data[cols.char],as.character)
+data[cols.num] <- sapply(data[cols.num],as.numeric)
+
+cols.num <- c("survey_followup.1.group.id_in_subsession",
+              "survey_followup.1.player.age",
+              "survey_followup.1.player.id_in_group",
+              "survey_followup.1.player.payoff",
+              "survey_followup.1.subsession.round_number")
+
+cols.char <- c("survey_followup.1.player.computer",
+               "survey_followup.1.player.gender",
+               "survey_followup.1.player.introweek",
+               "survey_followup.1.player.language",
+               "survey_followup.1.player.pid")
+
+W4647_data[cols.char] <- sapply(W4647_data[cols.char],as.character)
+W4647_data[cols.num] <- sapply(W4647_data[cols.num],as.numeric)
+
+colnames(W4647_data)[!(colnames(W4647_data) %in% colnames(data))]
+W4647_data$Class[!is.na(W4647_data$survey_network.1.player.study)] <- W4647_data$survey_network.1.player.study[!is.na(W4647_data$survey_network.1.player.study)]
+W4647_data$survey_network.1.player.study <- NULL
+
+data <- rbind(
+  data,
+  W4647_data
+)
+
+
+## Clean up false participants
+unique(data$survey.1.player.pid)
+data <- subset(data, !(grepl("fake",survey.1.player.pid )))
+unique(data$survey.1.player.pid)
+
+## Follow up
+LastCall_CogSciLing <- read_csv("data/LastCall_CogSciLing_times.csv")
+LastCall_CogSciLing_data <- read_csv("data/LastCall_CogSciLing_data.csv")
+
+LastCall_NordiskEng <- read_csv("data/LastCall_NordiskEng_times.csv")
+LastCall_NordiskEng_data <- read_csv("data/LastCall_NordiskEng_data.csv")
+
+LastCall_timing <- merge(LastCall_CogSciLing, LastCall_NordiskEng, all = T)
+LastCall_data <- merge(LastCall_CogSciLing_data, LastCall_NordiskEng_data, all = T)
+```
+
+## Network
+
+```{r}
+pacman::p_load(tidyverse, ggraph, tidytext, readxl, igraph, tidygraph, stringr, stringi)
+
+## Functions
+
+CreateKey <- function(Network_Data_intro, Network_Data_followup){
+  Names <- data.frame(key = sort(unique(tolower(c(
+    Network_Data_intro$survey.1.player.pid,
+    Network_Data_intro$network.1.player.friend1,
+    Network_Data_intro$network.1.player.friend2,
+    Network_Data_intro$network.1.player.friend3,
+    Network_Data_intro$network.1.player.friend4,
+    Network_Data_intro$network.1.player.friend5,
+    Network_Data_intro$network.1.player.friend6,
+    Network_Data_intro$network.1.player.friend7,
+    Network_Data_intro$network.1.player.friend8,
+    Network_Data_intro$network.1.player.friend9,
+    Network_Data_intro$network.1.player.friend10,
+    Network_Data_followup$survey_followup.1.player.pid,
+    Network_Data_followup$network_followup.1.player.friend1,
+    Network_Data_followup$network_followup.1.player.friend2,
+    Network_Data_followup$network_followup.1.player.friend3,
+    Network_Data_followup$network_followup.1.player.friend4,
+    Network_Data_followup$network_followup.1.player.friend5,
+    Network_Data_followup$network_followup.1.player.friend6,
+    Network_Data_followup$network_followup.1.player.friend7,
+    Network_Data_followup$network_followup.1.player.friend8,
+    Network_Data_followup$network_followup.1.player.friend9,
+    Network_Data_followup$network_followup.1.player.friend10)
+  ))))
+  return(Names)
+}
+
+CreateEdges_intro <- function(Network_Data, key, uniqueKey){
+  for (i in seq(nrow(key))){
+    Network_Data$survey.1.player.pid[tolower(Network_Data$survey.1.player.pid)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend1[tolower(Network_Data$network.1.player.friend1)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend2[tolower(Network_Data$network.1.player.friend2)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend3[tolower(Network_Data$network.1.player.friend3)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend4[tolower(Network_Data$network.1.player.friend4)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend5[tolower(Network_Data$network.1.player.friend5)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend6[tolower(Network_Data$network.1.player.friend6)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend7[tolower(Network_Data$network.1.player.friend7)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend8[tolower(Network_Data$network.1.player.friend8)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend9[tolower(Network_Data$network.1.player.friend9)==tolower(key$key[i])] =  key$label[i]
+    Network_Data$network.1.player.friend10[tolower(Network_Data$network.1.player.friend10)==tolower(key$key[i])] =  key$label[i]
+  }
+  
+  d <- data.frame(from=rep(NA,nrow(Network_Data)*10),to=rep(NA,nrow(Network_Data)*10),weight=rep(NA,nrow(Network_Data)*10))
+  n=1
+  for (i in seq(nrow(Network_Data))){
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend1[i]
+    d$weight[n] <- Network_Data$network.1.player.scale1[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend2[i]
+    d$weight[n] <- Network_Data$network.1.player.scale2[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend3[i]
+    d$weight[n] <- Network_Data$network.1.player.scale3[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend4[i]
+    d$weight[n] <- Network_Data$network.1.player.scale4[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend5[i]
+    d$weight[n] <- Network_Data$network.1.player.scale5[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend6[i]
+    d$weight[n] <- Network_Data$network.1.player.scale6[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend7[i]
+    d$weight[n] <- Network_Data$network.1.player.scale7[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend8[i]
+    d$weight[n] <- Network_Data$network.1.player.scale8[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend9[i]
+    d$weight[n] <- Network_Data$network.1.player.scale9[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey.1.player.pid[i]
+    d$to[n] <- Network_Data$network.1.player.friend10[i]
+    d$weight[n] <- Network_Data$network.1.player.scale10[i]
+    n<-n+1
+  }
+  
+  edges <- subset(d,complete.cases(d))
+  edges <- subset(edges, !(grepl("fake",edges$from)|grepl("fake",edges$to)))
+  
+  edges$from <- stri_trans_general(str = edges$from, id = "Latin-ASCII")
+  edges$to <- stri_trans_general(str = edges$to, id = "Latin-ASCII")
+  uniqueKey$label <- stri_trans_general(str = uniqueKey$label, id = "Latin-ASCII")
+  
+  for (i in seq(nrow(uniqueKey))){
+    edges$from[tolower(edges$from) == uniqueKey$label[i]] <- uniqueKey$IDx[i]
+    edges$to[tolower(edges$to) == uniqueKey$label[i]] <- uniqueKey$IDx[i]
+  }
+  return(edges)
+}
+
+CreateEdges_followup <- function(Network_Data, key, uniqueKey){
+  for (i in seq(nrow(key))){
+    Network_Data$survey_followup.1.player.pid[tolower(Network_Data$survey_followup.1.player.pid)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend1[tolower(Network_Data$network_followup.1.player.friend1)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend2[tolower(Network_Data$network_followup.1.player.friend2)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend3[tolower(Network_Data$network_followup.1.player.friend3)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend4[tolower(Network_Data$network_followup.1.player.friend4)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend5[tolower(Network_Data$network_followup.1.player.friend5)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend6[tolower(Network_Data$network_followup.1.player.friend6)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend7[tolower(Network_Data$network_followup.1.player.friend7)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend8[tolower(Network_Data$network_followup.1.player.friend8)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend9[tolower(Network_Data$network_followup.1.player.friend9)==key$key[i]] =  key$label[i]
+    Network_Data$network_followup.1.player.friend10[tolower(Network_Data$network_followup.1.player.friend10)==key$key[i]] =  key$label[i]
+  }
+  
+  d <- data.frame(from=rep(NA,nrow(Network_Data)*10),to=rep(NA,nrow(Network_Data)*10),weight=rep(NA,nrow(Network_Data)*10))
+  n=1
+  for (i in seq(nrow(Network_Data))){
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend1[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale1[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend2[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale2[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend3[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale3[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend4[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale4[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend5[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale5[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend6[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale6[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend7[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale7[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend8[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale8[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend9[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale9[i]
+    n<-n+1
+    d$from[n] <- Network_Data$survey_followup.1.player.pid[i]
+    d$to[n] <- Network_Data$network_followup.1.player.friend10[i]
+    d$weight[n] <- Network_Data$network_followup.1.player.scale10[i]
+    n<-n+1
+    
+  }
+  
+  edges <- subset(d,complete.cases(d))
+  nodes <- data.frame(ID = stri_trans_general(str = unique(Network_Data$survey_followup.1.player.pid), id = "Latin-ASCII"))
+  edges$from <- stri_trans_general(str = edges$from, id = "Latin-ASCII")
+  edges$to <- stri_trans_general(str = edges$to, id = "Latin-ASCII")
+  uniqueKey$label <- stri_trans_general(str = uniqueKey$label, id = "Latin-ASCII")
+  
+  edges <- subset(edges, !(grepl("fake",edges$from)|grepl("fake",edges$to)))
+  nodes <- subset(nodes, !(grepl("fake",nodes$ID)))
+  
+  for (i in seq(nrow(uniqueKey))){
+    edges$from[tolower(edges$from) == uniqueKey$label[i]] <- uniqueKey$IDx[i]
+    edges$to[tolower(edges$to) == uniqueKey$label[i]] <- uniqueKey$IDx[i]
+  }
+  return(edges)
+}
+
+## Cogsci
+
+CogSci_Intro <- CogSci_data %>%
+  select(
+    survey.1.player.pid,
+    network.1.player.id_in_group:network.1.subsession.round_number           
+  ) %>% mutate(
+    survey.1.player.pid = gsub("sarah hvid andersen","Sarah Hvid Andersen",survey.1.player.pid),
+    survey.1.player.pid = gsub("Gustav Alfred vous metzsch", "Gustav Meltzch",survey.1.player.pid)
+  )
+
+CogSci_Followup <- LastCall_data %>%
+  subset(grepl("cognitive science", tolower(survey_followup.1.player.study))) %>%
+  select(
+    survey_followup.1.player.pid,
+    network_cogsci.1.player.friend1:network_cogsci.1.subsession.round_number           
+  ) %>% mutate(
+    network_cogsci.1.player.friend1 = gsub("laerke braedder","lærke b",network_cogsci.1.player.friend1))
+
+colnames(CogSci_Followup) <- gsub("_cogsci.","_followup.",colnames(CogSci_Followup))
+
+key <- read_delim("CogSci/CogSci_key.csv",delim=",") %>%
+  mutate(key = tolower(key))
+  
+key$label <- as.numeric(as.factor(key$label))
+uniqueKey <- data.frame(
+  label = as.character(unique(key$label)),
+  IDx = sample(seq(length(unique(key$label)))))
+
+edges <- CreateEdges_intro(CogSci_Intro, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_CogSci19_Intro.csv")
+
+edges <- CreateEdges_followup(CogSci_Followup, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_CogSci19_Followup.csv")
+
+nodes <- data.frame(ID = unique(key$label))
+write_csv(nodes, "NetworkData_CogSci19_nodes.csv")
+
+## English
+
+English_Intro <- English_data %>%
+  select(
+    survey.1.player.pid,
+    network.1.player.id_in_group:network.1.subsession.round_number           
+  )
+
+English_Followup <- LastCall_data %>%
+  subset(grepl("english|engelsk", tolower(survey_followup.1.player.study))) %>%
+  select(
+    survey_followup.1.player.pid,
+    network_followup.1.player.friend1:network_followup.1.subsession.round_number           
+  )
+
+Names <- CreateKey(English_Intro, English_Followup)
+
+key <- read_delim("English_key.csv",delim=",") %>%
+  mutate(key = tolower(key))
+
+uniqueKey <- data.frame(
+  label = as.character(unique(key$label)),
+  IDx = sample(seq(length(unique(key$label)))))
+
+edges <- CreateEdges_intro(English_Intro, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_English19_Intro.csv")
+
+edges <- CreateEdges_followup(English_Followup, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_English19_Followup.csv")
+nodes <- data.frame(ID = unique(key$label))
+write_csv(nodes, "NetworkData_English19_nodes.csv")
+# Linguistics
+
+Linguistics_Intro <- Linguistics_data %>%
+  select(
+    survey.1.player.pid,
+    network.1.player.id_in_group:network.1.subsession.round_number           
+  )
+
+Linguistics_Followup <- LastCall_data %>%
+  subset(grepl("linguistics|lingustics|lingvistik", tolower(survey_followup.1.player.study))) %>%
+  select(
+    survey_followup.1.player.pid,
+    network_followup.1.player.friend1:network_followup.1.subsession.round_number           
+  ) 
+
+Names <- CreateKey(Linguistics_Intro, Linguistics_Followup)
+
+key <- read_delim("Linguistics_key.csv",delim=",") %>%
+  mutate(key = tolower(key))
+  
+key$label <- as.numeric(as.factor(key$label))
+uniqueKey <- data.frame(
+  label = as.character(unique(key$label)),
+  IDx = sample(seq(length(unique(key$label)))))
+
+edges <- CreateEdges_intro(Linguistics_Intro, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_Linguistics19_Intro.csv")
+
+edges <- CreateEdges_followup(Linguistics_Followup, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_Linguistics19_Followup.csv")
+nodes <- data.frame(ID = unique(key$label))
+write_csv(nodes, "NetworkData_Linguistics19_nodes.csv")
+
+# Nordic
+Nordic_Intro <- Nordic_data %>%
+  select(
+    survey.1.player.pid,
+    network.1.player.id_in_group:network.1.subsession.round_number           
+  )
+
+Nordic_Followup <- LastCall_data %>%
+  subset(grepl("nordic|nordisk", tolower(survey_followup.1.player.study))) %>%
+  select(
+    survey_followup.1.player.pid,
+    network_followup.1.player.friend1:network_followup.1.subsession.round_number           
+  ) 
+
+Names <- CreateKey(Nordic_Intro, Nordic_Followup)
+
+key <- read_delim("Linguistics_key.csv",delim=",") %>%
+  mutate(key = tolower(key))
+  
+key$label <- as.numeric(as.factor(key$label))
+uniqueKey <- data.frame(
+  label = as.character(unique(key$label)),
+  IDx = sample(seq(length(unique(key$label)))))
+
+edges <- CreateEdges_intro(Linguistics_Intro, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_Linguistics19_Intro.csv")
+
+edges <- CreateEdges_followup(Linguistics_Followup, key, uniqueKey)
+unique(c(edges$from,edges$to))
+write_csv(edges, "NetworkData_Linguistics19_Followup.csv")
+# Religion
+
+# Information Science
+
+# DIgital Design
+
+# Media studies
+```
+
+## Imitation Inhibition
+
+```{r}
+
+# Imitation Inhibition: (numbers are the cues)
+# https://gitlab.pavlovia.org/maltelau/stroop
+# Cognitive Science 28/08
+# Engelsk 06/09
+# Nordisk 25/09 and 26/09
+# Lingvistik 12/09
+# https://gitlab.pavlovia.org/Rnault/imitation-inhibition
+# Religion Science 28/10
+# Mediavidenskab 04/11
+# Recall 06/11 and 07/11
+# Digital Design 08/11
+# Informationvidenskab 14/11
+# ________________________________________________________
+# Explicit Imitation: (no numbers, imitate the finger)
+# https://gitlab.pavlovia.org/Rnault/stroop
+# Cognitive Science 28/08
+# Engelsk 06/09
+# Nordisk 25/09 and 26/09
+# Lingvistik 12/09
+# https://gitlab.pavlovia.org/Rnault/explicit-imitation
+# Religion Science 28/10
+# Mediavidenskab 04/11
+# Recall 06/11 and 07/11
+# Digital Design 08/11
+# Informationvidenskab 14/11
+# ________________________________________________________
+# Explicit Inhibition: (no numbers, lift the opposite finger)
+# https://gitlab.pavlovia.org/Rnault/explicit-inhibition
+# Religion Science 28/10
+# Mediavidenskab 04/11
+# Recall 06/11 and 07/11
+# Digital Design 08/11
+# Informationvidenskab 14/11
+
+
+
+ImiInhi_Data <- list.files(path="data/Implicit_II/", pattern="csv",full.names = T) %>%
+    purrr::map_df(read_csv)
+
+Mirror_Data1 <- list.files(path="data/Explicit_Imitation/", pattern="csv",full.names = T) %>%
+    purrr::map_df(read_csv)
+
+Mirror_Data2 <- list.files(path="data/Explicit_Inhibition/", pattern="csv",full.names = T) %>%
+    purrr::map_df(read_csv)
+
+## Identify incomplete trials
+ImiInhi_Data <- subset(ImiInhi_Data, !is.na(condition))
+x <- ImiInhi_Data %>% group_by(participant,condition) %>% dplyr::summarize(Trials = n())
+x1 <- x  %>% group_by(Trials) %>% summarize(Frequency=n())
+## Anything below 60 looks dodgy
+ImiInhi_Data <- subset(ImiInhi_Data, !(participant %in% unique(x$participant[x$Trials<60])))
+
+
+## Identify incomplete trials
+Mirror_Data1 <- subset(Mirror_Data1, !is.na(condition))
+x <- Mirror_Data1 %>% group_by(participant,condition) %>% dplyr::summarize(Trials = n())
+x1 <- x  %>% group_by(Trials) %>% summarize(Frequency=n())
+## Anything below 60 looks dodgy
+Mirror_Data1 <- subset(Mirror_Data1, !(participant %in% unique(x$participant[x$Trials<60])))
+
+
+# IDENtIFY MISSING AND INCOMPLETE PARTICIPANTS
+data$participant.code[!(data$participant.code %in% ImiInhi_Data$participant)]
+data1 <- data[!(data$participant.code %in% ImiInhi_Data$participant),]
+data1$ImitationInhibition <- "missing"
+data1[,c("survey.1.player.pid","Class")]
+
+# FULLY MISSING Explicit imitation
+data$participant.code[!(data$participant.code %in% Mirror_Data1$participant)]
+data2 <- data[!(data$participant.code %in% Mirror_Data1$participant),]
+data2$ExplicitImitation <- "missing"
+data2[,c("survey.1.player.pid","Class")]
+
+d <- merge(data1, data2, all=T) %>%
+  select(
+    survey.1.player.pid,
+    Class,
+    ImitationInhibition,
+    ExplicitImitation
+  )
+
+write_csv(d,"MissingTasks.csv")
+
+# SCIC: cue is a 1 and index moves
+# SIII: cue is a 1 and middle moves
+# SIIC: cue says 1, the index moves, but it's facing the participant's middle finger
+# SCII: cue says 1, the middle finger moves, but it's facing the participant's index.
+
+ImiInhi_Data$Congruency = "Incongruent"
+ImiInhi_Data$Congruency[grepl("SCIC|SIIC",ImiInhi_Data$condition)]="Congruent"
+ImiInhi_Data$Orientation = "Compatible"
+ImiInhi_Data$Orientation[grepl("SCII|SIIC",ImiInhi_Data$condition)]="Mirrored"
+
+ggplot(subset(Mirror_Data, participant=="23mbj83y"), aes(condition,resp.rt, color=finger)) + geom_jitter(width=0.1) + theme_classic()
+ggplot(subset(ImiInhi_Data, participant=="23mbj83y"), aes(condition,resp.rt, color=finger)) + geom_jitter(width=0.1) + theme_classic()
+ggplot(subset(ImiInhi_Data, resp.rt<2), aes(condition,resp.rt, color=finger)) + geom_jitter(width=0.1) + theme_classic()
+
+length(unique(ImiInhi_Data$participant))
+length(unique(Mirror_Data$participant))
+
+x<-ImiInhi_Data %>% group_by(participant,condition) %>% dplyr::summarise(n())
+
+m <- lmer(resp.rt ~ 0 + Congruency : Orientation + (0 + Congruency : Orientation|participant),ImiInhi_Data,REML=F)
+
+
+m <- lmer(resp.rt ~ 1 + condition + (1 + condition|participant),Mirror_Data,REML=F)
+summary(m)
+
+```
+
+
+## Gumballs
+
+```{r}
+
+dd <- data %>%
+  select(
+    colnames(data)[grepl("participant|gambler",colnames(data))]
+  )
+#colnames(dd)
+
+d_opponent <- dd %>% 
+  gather(trial, opponent, colnames(dd)[grepl("opponent",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  opponent
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_nBlueOn8 <- dd %>% 
+  gather(trial, nBlueOn8, colnames(dd)[grepl("nBlueOn8",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  nBlueOn8
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_firstChoice <- dd %>% 
+  gather(trial, firstChoice, colnames(dd)[grepl("firstChoice",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  firstChoice
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_botChoice <- dd %>% 
+  gather(trial, botChoice, colnames(dd)[grepl("botChoice",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  botChoice
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_secondChoice <- dd %>% 
+  gather(trial, secondChoice, colnames(dd)[grepl("secondChoice",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  secondChoice
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_finalDraw <- dd %>% 
+  gather(trial, finalDraw, colnames(dd)[grepl("finalDraw",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  finalDraw
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_right <- dd %>% 
+  gather(trial, right, colnames(dd)[grepl("right",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  right
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+      
+d_payoff <- dd %>% 
+  gather(trial, payoff, colnames(dd)[grepl("payoff",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  payoff
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_groupID <- dd %>% 
+  gather(trial, groupID, colnames(dd)[grepl("subsession",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  groupID
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+ddd <- merge(
+  d_opponent,
+  d_nBlueOn8
+)
+
+
+ddd <- merge(
+  ddd,
+  d_firstChoice)
+
+ddd <- merge(
+  ddd,
+  d_botChoice)
+
+ddd <- merge(
+  ddd,
+  d_secondChoice)
+
+ddd <- merge(
+  ddd,
+  d_finalDraw)
+
+ddd <- merge(
+  ddd,
+  d_right)
+
+ddd <- merge(
+  ddd,
+  d_payoff)
+
+#ddd <- merge(
+#  ddd,
+#  d_groupID)
+
+## Identify incomplete trials
+x <- ddd %>% group_by(participant.code,opponent) %>% dplyr::summarize(Trials = n())
+x1 <- x  %>% group_by(Trials) %>% summarize(Frequency=n())
+
+## Anything below 60 looks dodgy
+data$participant.code[!(data$participant.code %in% ddd$participant.code)]
+data3 <- data[!(data$participant.code %in% ddd$participant.code),]
+data3$Gumballs <- "missing"
+data3[,c("survey.1.player.pid","Class")]
+
+d <- merge(d, data3, all=T) 
+
+
+GumballsData <- ddd
+
+write_csv(GumballsData,"Gumballs_data.csv")
+```
+
+
+# TRUST
+```{r}
+dd <- data %>%
+  select(
+    colnames(data)[grepl("participant|trust",colnames(data))]
+  )
+
+d_id_in_group <- dd %>% 
+  gather(trial, id_in_group, colnames(dd)[grepl("id_in_group",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_group
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_payoff <- dd %>% 
+  gather(trial, payoff, colnames(dd)[grepl("payoff",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  payoff
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_id_in_subsession <- dd %>% 
+  gather(trial, id_in_subsession, colnames(dd)[grepl("id_in_subsession",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_subsession
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_sent_amount <- dd %>% 
+  gather(trial, sent_amount, colnames(dd)[grepl("sent_amount",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  sent_amount
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_sent_back_amount <- dd %>% 
+  gather(trial, sent_back_amount, colnames(dd)[grepl("sent_back_amount",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  sent_back_amount
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+ddd <- merge(
+  d_id_in_group,
+  d_payoff
+)
+
+ddd <- merge(
+  ddd,
+  d_id_in_subsession)
+
+ddd <- merge(
+  ddd,
+  d_sent_amount)
+
+ddd <- merge(
+  ddd,
+  d_sent_back_amount)
+
+x <- ddd %>% group_by(participant.code) %>% dplyr::summarize(Trials = n())
+x1 <- x  %>% group_by(Trials) %>% summarize(Frequency=n())
+
+## Anything below 60 looks dodgy
+data$participant.code[!(data$participant.code %in% ddd$participant.code)]
+data4 <- data[!(data$participant.code %in% ddd$participant.code),]
+data4$Trust <- "missing"
+data4[,c("survey.1.player.pid","Class")]
+
+d <- merge(d, data4, all=T) 
+
+TrustData <- ddd
+```
+
+# PRISONER
+```{r}
+dd <- data %>%
+  select(
+    colnames(data)[grepl("participant|prisoner\\.",colnames(data))]
+  )
+colnames(dd)
+
+d_id_in_group <- dd %>% 
+  gather(trial, id_in_group, colnames(dd)[grepl("id_in_group",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_group
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_payoff <- dd %>% 
+  gather(trial, payoff, colnames(dd)[grepl("payoff",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  payoff
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_id_in_subsession <- dd %>% 
+  gather(trial, id_in_subsession, colnames(dd)[grepl("id_in_subsession",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_subsession
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+
+
+d_decision <- dd %>% 
+  gather(trial, decision, colnames(dd)[grepl("decision",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  decision
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+#### From here
+
+ddd <- merge(
+  d_id_in_group,
+  d_payoff
+)
+
+ddd <- merge(
+  ddd,
+  d_id_in_subsession)
+
+ddd <- merge(
+  ddd,
+  d_decision)
+
+x <- ddd %>% group_by(participant.code) %>% dplyr::summarize(Trials = n())
+x1 <- x  %>% group_by(Trials) %>% summarize(Frequency=n())
+
+## Anything below 60 looks dodgy
+data$participant.code[!(data$participant.code %in% ddd$participant.code)]
+data5 <- data[!(data$participant.code %in% ddd$participant.code),]
+data5$Trust <- "missing"
+data5[,c("survey.1.player.pid","Class")]
+
+d <- merge(d, data5, all=T) 
+
+PrisonerData <- ddd
+```
+
+# PRISONER RETALIATION
+```{r}
+dd <- data %>%
+  select(
+    colnames(data)[grepl("participant|prisoner_retaliation",colnames(data))]
+  )
+colnames(dd)
+
+d_id_in_group <- dd %>% 
+  gather(trial, id_in_group, colnames(dd)[grepl("id_in_group",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_group
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+d_decision <- dd %>% 
+  gather(trial, decision, colnames(dd)[grepl("decision",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  decision
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_id_in_subsession <- dd %>% 
+  gather(trial, id_in_subsession, colnames(dd)[grepl("id_in_subsession",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_subsession
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_payoff <- dd %>% 
+  gather(trial, payoff, colnames(dd)[grepl("payoff",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  payoff
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_botChoice <- dd %>% 
+  gather(trial, botChoice, colnames(dd)[grepl("botchoice",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  botChoice
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+#### From here
+
+ddd <- merge(
+  d_id_in_group,
+  d_payoff
+)
+
+ddd <- merge(
+  ddd,
+  d_id_in_subsession)
+
+ddd <- merge(
+  ddd,
+  d_decision)
+
+ddd <- merge(
+  ddd,
+  d_botChoice)
+
+x <- ddd %>% group_by(participant.code) %>% dplyr::summarize(Trials = n())
+x1 <- x  %>% group_by(Trials) %>% summarize(Frequency=n())
+
+## Anything below 60 looks dodgy
+data$participant.code[!(data$participant.code %in% ddd$participant.code)]
+data6 <- data[!(data$participant.code %in% ddd$participant.code),]
+data6$Trust <- "missing"
+data6[,c("survey.1.player.pid","Class")]
+
+d <- merge(d, data6, all=T) 
+
+PrisonerRetaliationData <- ddd
+```
+
+# CRD SEQUENTIAL
+```{r}
+
+
+dd <- data %>%
+  select(
+    colnames(data)[grepl("participant|CRD_sequential",colnames(data))]
+  )
+colnames(dd)
+
+d_id_in_group <- dd %>% 
+  gather(trial, id_in_group, colnames(dd)[grepl("id_in_group",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_group
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+d_decision <- dd %>% 
+  gather(trial, decision, colnames(dd)[grepl("decision",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  decision
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_id_in_subsession <- dd %>% 
+  gather(trial, id_in_subsession, colnames(dd)[grepl("id_in_subsession",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  id_in_subsession
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_payoff <- dd %>% 
+  gather(trial, payoff, colnames(dd)[grepl("payoff",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  payoff
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+d_botChoice <- dd %>% 
+  gather(trial, botChoice, colnames(dd)[grepl("botchoice",colnames(dd))])  %>%
+  select(
+  participant.id_in_session,
+  participant.code,
+  trial,
+  botChoice
+  ) %>%
+  mutate(
+    trial = parse_number(gsub("\\.","",trial))
+  )
+
+#### From here
+
+ddd <- merge(
+  d_id_in_group,
+  d_payoff
+)
+
+ddd <- merge(
+  ddd,
+  d_id_in_subsession)
+
+ddd <- merge(
+  ddd,
+  d_decision)
+
+ddd <- merge(
+  ddd,
+  d_botChoice)
+
+x <- ddd %>% group_by(participant.code) %>% dplyr::summarize(Trials = n())
+x1 <- x  %>% group_by(Trials) %>% summarize(Frequency=n())
+
+## Anything below 60 looks dodgy
+data$participant.code[!(data$participant.code %in% ddd$participant.code)]
+data6 <- data[!(data$participant.code %in% ddd$participant.code),]
+data6$Trust <- "missing"
+data6[,c("survey.1.player.pid","Class")]
+
+d <- merge(d, data6, all=T) 
+
+PrisonerRetaliationData <- ddd
+```
+
+# MATCHING PENNIES
+```{r}
+matching_pennies
+```
+
+# HAGEN
+```{r}
+Hagen_matrices
+```
+
+# Identify people missing CRD
+# Identify people missing Matching Pennies
+# Identify people missing Hagen_matrices
+
+
+```{r}
+
+gg <- data %>%
+  select(participant.code,
+         participant._current_app_name) %>%
+  subset(participant._current_app_name!="total")
+
+d0 <- gg %>% subset(
+  participant._current_app_name=="prisoner_retaliation"
+)
+
+d0$PrisonerRetaliation <- "missing"
+
+d1 <- gg %>% subset(
+  participant._current_app_name=="prisoner_retaliation"| 
+    participant._current_app_name=="CRD_sequential"
+)
+
+d1$CRD_sequential <- "missing"
+
+d2 <- gg %>% subset(
+  participant._current_app_name=="prisoner_retaliation" | 
+    participant._current_app_name=="CRD_sequential"| 
+    participant._current_app_name=="matching_pennies_bot"
+)
+d2$MatchingPennies <- "missing"
+
+d3 <- gg %>% subset(
+  participant._current_app_name=="prisoner_retaliation" |
+  participant._current_app_name=="CRD_sequential" | 
+  participant._current_app_name=="matching_pennies_bot" | 
+  participant._current_app_name=="Hagen_matrices"
+)
+d3$HagenMatrices <- "missing"
+
+MissingData <- merge(d0,d1, all=T)
+MissingData <- merge(MissingData,d2, all=T)
+MissingData <- merge(MissingData,d3, all=T)
+
+data6 <- data[(data$participant.code %in% MissingData$participant.code),] %>%
+  select(survey.1.player.pid,
+         Class,
+         participant.code
+         )
+
+data7 <- data %>% subset(Class!="Religion") %>%
+  select(survey.1.player.pid,
+         Class)
+data7$ExplicitInhibition = "missing"
+
+
+MissingData <- merge(data6, MissingData, all=T) 
+MissingData <- merge(d, MissingData, all=T) 
+MissingData <- MissingData %>% select(-participant.code, -participant._current_app_name)
+MissingData <- merge( MissingData,data7, all=T) 
+
+write_csv(MissingData,"MissingTasks.csv")
+```
+
