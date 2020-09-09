@@ -1,0 +1,291 @@
+---
+title: "NetworkPracticalAssignment"
+author: "RF"
+date: "4/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Table of content
+
+In the first week we collected data about the social network within the class. Now that you have gone through most of the course and the readings for the network module, we can finally properly analyse your data.
+
+The question that we want to answer (perhaps a bit naive) is: what distinguish a newly formed class (1st semester) from a well established one (4th semester)?
+
+What follows is guidelines for how to tackle the practical exercise (and i know you're busy with the exam, so figure out how much time you can dedicate to this and that will do).
+
+There's 4 parts:
+1. Ecological validity of the data
+2. Visualization
+3. Quantification 
+4. Community detection
+
+
+1. Ecological validity of the data
+Q:Discuss the questions that were asked to reconstruct the network. Besides pinpointing shortcomings (related also to the classroom networks reading), try to reformulate the questions so that it be better and work for both 1st and 4th semester students.
+
+2. Visualize the data
+Q: Discuss how the classes differ along the 1st vs 4th semester contrast. Discuss how the visualization affords for certain contrasts and what is difficult to assess from the vizualization. Could you imagine different visualizations before moving onto quantification?
+
+Here we load 4 anonymized datasets:
+- 1st semester data: CogSci19 and Linguistics19
+- 4th semester data: CogSci17 and CogSci18
+
+First we load the data
+
+```{r Load data}
+
+pacman::p_load(tidyverse,
+               network,
+               igraph,
+               ggraph,
+               tidygraph,
+               patchwork)
+
+CogSci_2019_n0_edges <- read_csv(here("data", "networks", "edges_CogSci_2019_v0.csv"))
+CogSci_2019_n1_edges <- read_csv(here("data", "networks", "edges_CogSci_2019_v1.csv"))
+
+CogSci_2019_nodes <- data.frame(ID=unique(c(
+  CogSci_2019_n0_edges$from,
+  CogSci_2019_n1_edges$from,
+  CogSci_2019_n0_edges$to,
+  CogSci_2019_n1_edges$to)))
+
+CogSci_2020_n0_edges <- read_csv(here("data", "networks", "edges_CogSci_2020_v0.csv"))
+#CogSci_2020_n1_edges <- read_csv(here("data", "networks", "edges_CogSci_2020_v1.csv"))
+
+CogSci_2020_nodes <- data.frame(ID=unique(c(
+  CogSci_2020_n0_edges$from,
+  #CogSci_2019_n1_edges$from,
+  CogSci_2020_n0_edges$to#,
+  #CogSci_2019_n1_edges$to
+  )))
+
+# # 1st semester
+# CogSci19_edges <- read_csv("NetworkData_CogSci19_Followup.csv")
+# CogSci19_nodes <- read_csv("NetworkData_CogSci19_nodes.csv")
+# 
+# Linguistics19_edges <- read_csv("NetworkData_Linguistics19_Followup.csv")
+# Linguistics19_nodes <- read_csv("NetworkData_Linguistics19_nodes.csv")
+# 
+# # 4th semester
+# CogSci17_edges <- read_csv("NetworkData_CogSci17.csv") %>% select(-X1) %>% mutate(weight = 7)
+# CogSci17_nodes <- data.frame(ID=unique(c(CogSci17_edges$from,CogSci17_edges$to)))
+# 
+# CogSci18_edges <- read_csv("NetworkData_CogSci18.csv")
+# CogSci18_nodes <- data.frame(ID=unique(c(CogSci18_edges$from,CogSci18_edges$to)))
+
+```
+
+Then we visualize the data
+
+```{r}
+
+CogSci_2019_n0_igraph <-
+  graph_from_data_frame(d = CogSci_2019_n0_edges,
+                        vertices = CogSci_2019_nodes,
+                        directed = TRUE)
+CogSci_2019_n0_igraph <- simplify(CogSci_2019_n0_igraph, 
+                                  remove.multiple = TRUE, 
+                                  remove.loops = TRUE,
+                                  edge.attr.comb = igraph_opt("edge.attr.comb"))
+#CogSci_2019_n0_igraph <- igraph::delete.edges(
+#  CogSci_2019_n0_igraph, which(E(CogSci_2019_n0_igraph)$weight <2))
+
+CogSci_2019_n1_igraph <-
+  graph_from_data_frame(d = CogSci_2019_n1_edges,
+                        vertices = CogSci_2019_nodes,
+                        directed = TRUE)
+CogSci_2019_n1_igraph <- simplify(CogSci_2019_n1_igraph, 
+                                  remove.multiple = TRUE, 
+                                  remove.loops = TRUE,
+                                  edge.attr.comb = igraph_opt("edge.attr.comb"))
+
+CogSci_2020_n0_igraph <-
+  graph_from_data_frame(d = CogSci_2020_n0_edges,
+                        vertices = CogSci_2020_nodes,
+                        directed = TRUE)
+CogSci_2020_n0_igraph <- simplify(CogSci_2020_n0_igraph, 
+                                  remove.multiple = TRUE, 
+                                  remove.loops = TRUE,
+                                  edge.attr.comb = igraph_opt("edge.attr.comb"))
+#CogSci_2019_n1_igraph <- igraph::delete.edges(
+#  CogSci_2019_n1_igraph, which(E(CogSci_2019_n1_igraph)$weight <2))
+par(mfrow = c(2,2),
+          oma = c(5,4,0,0) + 0.1,
+          mar = c(0,0,1,1) + 0.1)
+
+V(CogSci_2019_n0_igraph)$size <- 8
+V(CogSci_2019_n0_igraph)$frame.color <- "white"
+V(CogSci_2019_n0_igraph)$color <- "orange"
+V(CogSci_2019_n0_igraph)$label <- "" 
+E(CogSci_2019_n0_igraph)$arrow.mode <- 0
+E(CogSci_2019_n0_igraph)$width <- edge_attr(CogSci_2019_n0_igraph)$weight/2
+deg <- degree(CogSci_2019_n0_igraph, mode="all")
+V(CogSci_2019_n0_igraph)$size <- deg/4
+
+V(CogSci_2019_n1_igraph)$size <- 8
+V(CogSci_2019_n1_igraph)$frame.color <- "white"
+V(CogSci_2019_n1_igraph)$color <- "orange"
+V(CogSci_2019_n1_igraph)$label <- "" 
+E(CogSci_2019_n1_igraph)$arrow.mode <- 0
+E(CogSci_2019_n1_igraph)$width <- edge_attr(CogSci_2019_n1_igraph)$weight
+deg <- degree(CogSci_2019_n1_igraph, mode="all")
+V(CogSci_2019_n1_igraph)$size <- deg/2
+
+V(CogSci_2020_n0_igraph)$size <- 8
+V(CogSci_2020_n0_igraph)$frame.color <- "white"
+V(CogSci_2020_n0_igraph)$color <- "orange"
+V(CogSci_2020_n0_igraph)$label <- "" 
+E(CogSci_2020_n0_igraph)$arrow.mode <- 0
+E(CogSci_2020_n0_igraph)$width <- edge_attr(CogSci_2020_n0_igraph)$weight/2
+deg <- degree(CogSci_2020_n0_igraph, mode="all")
+V(CogSci_2020_n0_igraph)$size <- deg/4
+
+plot(CogSci_2019_n0_igraph,
+     layout = layout_with_graphopt,
+     edge.arrow.size = 0.2)
+
+plot(CogSci_2019_n1_igraph,
+     layout = layout_with_graphopt,
+     edge.arrow.size = 0.2)
+
+plot(CogSci_2020_n0_igraph,
+     layout = layout_with_graphopt,
+     edge.arrow.size = 0.2)
+
+
+# Igraph package
+CogSci18_igraph <-
+  graph_from_data_frame(d = CogSci18_edges,
+                        vertices = CogSci18_nodes,
+                        weighted = T,
+                        directed = TRUE)
+CogSci19_igraph <-
+  graph_from_data_frame(d = CogSci19_edges,
+                        vertices = CogSci19_nodes,
+                        directed = TRUE)
+
+par(mfrow=c(1,2))
+
+plot(CogSci18_igraph,
+     layout = layout_with_graphopt,
+     edge.arrow.size = 0.1)
+
+plot(CogSci19_igraph,
+     layout = layout_with_graphopt,
+     edge.arrow.size = 0.1)
+
+V(CogSci18_igraph)$size <- 8
+V(CogSci18_igraph)$frame.color <- "white"
+V(CogSci18_igraph)$color <- "orange"
+V(CogSci18_igraph)$label <- "" 
+E(CogSci18_igraph)$arrow.mode <- 0
+deg <- degree(CogSci18_igraph, mode="all")
+V(CogSci18_igraph)$size <- deg/2
+
+V(CogSci19_igraph)$size <- 8
+V(CogSci19_igraph)$frame.color <- "white"
+V(CogSci19_igraph)$color <- "orange"
+V(CogSci19_igraph)$label <- "" 
+E(CogSci19_igraph)$arrow.mode <- 0
+deg <- degree(CogSci19_igraph, mode="all")
+V(CogSci19_igraph)$size <- deg/2
+
+plot(CogSci18_igraph,
+     layout = layout_with_graphopt,
+     edge.arrow.size = 0.2)
+
+plot(CogSci19_igraph,
+     layout = layout_with_graphopt,
+     edge.arrow.size = 0.2)
+
+# The tidyverse way
+CogSci18_tidy <-
+  tbl_graph(nodes = CogSci18_nodes,
+            edges = CogSci18_edges,
+            directed = TRUE)
+
+p1 <-ggraph(CogSci18_tidy) + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  theme_graph()
+
+CogSci19_tidy <-
+  tbl_graph(nodes = CogSci19_nodes,
+            edges = CogSci19_edges,
+            directed = TRUE)
+p2 <- ggraph(CogSci19_tidy) + geom_edge_link() + geom_node_point() + theme_graph()
+
+p1 + p2
+
+```
+
+3. Quantification
+Q: Reflect on which aspects of networks could be interesting given your specific question. Discuss what you learn from these (and potentially other) metrics. Figure out if there are other important metrics we're missing given the nature of classroom social networks.
+
+
+```{r}
+
+mean(degree_distribution(CogSci18_igraph))
+mean(degree_distribution(CogSci19_igraph))
+
+# Degree
+rethinking::dens(degree_distribution(CogSci18_igraph))
+rethinking::dens(degree_distribution(CogSci19_igraph))
+
+# Average path length
+mean_distance(CogSci18_igraph, directed = TRUE, unconnected = TRUE)
+mean_distance(CogSci19_igraph, directed = TRUE, unconnected = TRUE)
+
+# Clustering coefficient
+transitivity(CogSci18_igraph)
+transitivity(CogSci19_igraph)
+
+## Centrality
+
+mean(betweenness(CogSci18_igraph))
+rethinking::dens(betweenness(CogSci18_igraph))
+mean(betweenness(CogSci19_igraph))
+rethinking::dens(betweenness(CogSci19_igraph))
+mean(eigen_centrality(CogSci18_igraph)$vector)
+mean(eigen_centrality(CogSci19_igraph)$vector)
+
+```
+
+But seriously?? Stats?
+Check bootnet for bootstrapping confidence intervals
+
+# 4 Community Detection
+
+Q: discuss the notion of community in a network and how it relates to the nature of classroom networks. Can you identify the communities in your class (given the plot)? If you were to assess the network differently (see first point), e.g. friendship vs. learning from, how would you imagine the communities to change?
+
+```{r}
+# Community detection
+par(mfrow=c(1,2))
+wc1 <- cluster_walktrap(CogSci18_igraph)
+modularity(wc1)
+membership(wc1)
+
+wc2 <- cluster_walktrap(CogSci19_igraph)
+modularity(wc2)
+membership(wc2)
+
+plot(wc1, CogSci18_igraph)
+plot(wc2, CogSci19_igraph)
+
+par(mfrow=c(1,2))
+
+# Community detection (by optimizing modularity over partitions):
+clp <- cluster_optimal(CogSci18_igraph)
+plot(clp, CogSci18_igraph)
+
+#clp <- cluster_optimal(CogSci19_igraph)
+#plot(clp, CogSci19_igraph)
+
+#par(mfrow=c(1,1))
+```
+
